@@ -10,3 +10,5 @@
 .pybuild
 .cache
 /snap/.snapcraft
+.venv
+.vscode

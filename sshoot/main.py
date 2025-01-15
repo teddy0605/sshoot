@@ -5,8 +5,7 @@ from argparse import (
     Namespace,
 )
 from functools import partial
-import shlex
-from typing import Set
+from typing import List, Set
 
 from argcomplete import autocomplete
 from toolrack.script import (
@@ -80,27 +79,39 @@ class Sshoot(Script):
         manager.remove_profile(args.name)
 
     def action_start(self, manager: Manager, args: Namespace):
-        """Start sshuttle for the specified profile."""
-        manager.start_profile(
-            args.name,
-            extra_args=args.args,
-            disable_global_extra_options=args.disable_global_extra_options,
-        )
-        self.print(_("Profile started"))
+        """Start sshuttle for the specified profile(s)."""
+        profiles = self._get_profiles(manager, args.names)
+        for profile in profiles:
+            manager.start_profile(
+                profile,
+                extra_args=args.args,
+                disable_global_extra_options=args.disable_global_extra_options,
+            )
+            self.print(_("Profile {name} started").format(name=profile))
 
     def action_stop(self, manager: Manager, args: Namespace):
-        """Stop sshuttle for the specified profile."""
-        manager.stop_profile(args.name)
-        self.print(_("Profile stopped"))
+        """Stop sshuttle for the specified profile(s)."""
+        profiles = self._get_profiles(manager, args.names)
+        for profile in profiles:
+            manager.stop_profile(profile)
+            self.print(_("Profile {name} stopped").format(name=profile))
 
     def action_restart(self, manager: Manager, args: Namespace):
-        """Restart sshuttle for the specified profile."""
-        manager.restart_profile(
-            args.name,
-            extra_args=args.args,
-            disable_global_extra_options=args.disable_global_extra_options,
-        )
-        self.print(_("Profile restarted"))
+        """Restart sshuttle for the specified profile(s)."""
+        profiles = self._get_profiles(manager, args.names)
+        for profile in profiles:
+            manager.restart_profile(
+                profile,
+                extra_args=args.args,
+                disable_global_extra_options=args.disable_global_extra_options,
+            )
+            self.print(_("Profile {name} restarted").format(name=profile))
+
+    def _get_profiles(self, manager: Manager, names: List[str]) -> List[str]:
+        """Get profiles to operate on, handling 'all' keyword."""
+        if 'all' in names:
+            return list(manager.get_profiles().keys())
+        return names
 
     def action_is_running(self, manager: Manager, args: Namespace):
         """Return whether the specified profile is running."""
@@ -224,11 +235,11 @@ class Sshoot(Script):
 
         # Start profile
         start_parser = subparsers.add_parser(
-            "start", help=_("start a VPN session for a profile")
+            "start", help=_("start VPN sessions for profiles")
         )
         complete_argument(
             start_parser.add_argument(
-                "name", help=_("name of the profile to start")
+                "names", nargs='+', help=_("names of the profiles to start or 'all'")
             ),
             partial(profile_completer, running=False),
         )
@@ -246,22 +257,22 @@ class Sshoot(Script):
 
         # Stop profile
         stop_parser = subparsers.add_parser(
-            "stop", help=_("stop a running VPN session for a profile")
+            "stop", help=_("stop running VPN sessions for profiles")
         )
         complete_argument(
             stop_parser.add_argument(
-                "name", help=_("name of the profile to stop")
+                "names", nargs='+', help=_("names of the profiles to stop or 'all'")
             ),
             partial(profile_completer, running=True),
         )
 
         # Restart profile
         restart_parser = subparsers.add_parser(
-            "restart", help=_("restart a VPN session for a profile")
+            "restart", help=_("restart VPN sessions for profiles")
         )
         complete_argument(
             restart_parser.add_argument(
-                "name", help=_("name of the profile to restart")
+                "names", nargs='+', help=_("names of the profiles to restart or 'all'")
             ),
             partial(profile_completer, running=True),
         )
